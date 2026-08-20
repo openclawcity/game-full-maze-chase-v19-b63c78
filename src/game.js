@@ -1,238 +1,204 @@
-// Full Maze Chase
-const canvas = document.getElementById('c');
+// Full Maze Chase — A complete maze game
+// Entry point: game.js
+
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-const TILE = 24;
-const COLS = 21;
-const ROWS = 21;
-canvas.width = COLS * TILE;
-canvas.height = ROWS * TILE;
+// --- Constants ---
+const TILE = 30; // pixel size of each tile
+const COLS = 20;
+const ROWS = 20;
+const WALL = 1;
+const PATH = 0;
+const DOT = 2;
+const PLAYER = 3;
+const EXIT = 4;
 
-// Maze: 0=empty, 1=wall, 2=dot, 3=power pellet
+// Colors
+const WALL_COLOR = '#2a2a6e';
+const PATH_COLOR = '#000';
+const DOT_COLOR = '#fff';
+const PLAYER_COLOR = '#ffcc00';
+const EXIT_COLOR = '#00ff88';
+const TEXT_COLOR = '#aaa';
+
+// Maze layout — 20x20 grid
+// 1 = wall, 0 = path, 2 = dot, 3 = player start, 4 = exit
 const MAZE = [
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-[1,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,1],
-[1,2,1,1,2,1,1,1,2,2,1,2,2,1,1,1,2,1,1,2,1],
-[1,3,1,1,2,1,1,1,2,2,2,2,2,1,1,1,2,1,1,3,1],
-[1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-[1,2,1,1,2,1,2,1,1,1,1,1,1,1,2,1,2,1,1,2,1],
-[1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1],
-[1,1,1,1,2,1,1,1,0,1,1,1,0,1,1,1,2,1,1,1,1],
-[0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0],
-[1,1,1,1,2,1,0,1,1,0,0,0,1,1,0,1,2,1,1,1,1],
-[0,0,0,0,2,0,0,1,0,0,0,0,0,1,0,0,2,0,0,0,0],
-[1,1,1,1,2,1,0,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
-[0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,1,2,1,0,0,0],
-[1,1,1,1,2,1,0,1,1,1,1,1,1,1,0,1,2,1,1,1,1],
-[1,2,2,2,2,2,2,2,2,2,1,2,2,2,2,2,2,2,2,2,1],
-[1,2,1,1,2,1,1,1,2,2,1,2,2,1,1,1,2,1,1,2,1],
-[1,3,2,1,2,2,2,2,2,2,0,2,2,2,2,2,2,1,2,3,1],
-[1,1,2,1,2,1,2,1,1,1,1,1,1,1,2,1,2,1,2,1,1],
-[1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1,2,2,2,2,1],
-[1,2,1,1,1,1,1,1,2,2,1,2,2,1,1,1,1,1,1,2,1],
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,3,2,0,2,0,0,0,2,0,0,2,0,0,0,2,0,2,0,1],
+  [1,0,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,0,1],
+  [1,0,2,2,0,0,0,2,2,0,0,2,2,0,0,0,0,1,0,1],
+  [1,0,1,0,1,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1],
+  [1,0,1,0,2,0,0,0,0,0,0,0,0,0,2,0,0,1,0,1],
+  [1,0,1,1,1,1,0,1,1,0,1,1,0,1,1,1,0,1,0,1],
+  [1,0,0,0,0,0,0,2,0,0,0,2,0,0,0,2,0,0,0,1],
+  [1,1,1,0,1,0,1,1,1,1,1,1,1,0,1,0,1,1,1,1],
+  [1,2,0,0,1,0,2,2,2,0,0,2,2,0,1,0,0,0,2,1],
+  [1,0,1,0,1,0,2,0,0,0,0,0,2,0,1,0,1,0,0,1],
+  [1,0,1,0,2,0,2,0,1,1,1,0,2,0,2,0,1,0,1,1],
+  [1,0,0,0,0,0,0,0,1,4,1,0,0,0,0,0,0,0,2,1],
+  [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,0,1],
+  [1,0,2,0,0,0,1,0,0,2,0,0,1,0,0,0,2,0,1,1],
+  [1,1,1,0,1,1,1,1,0,1,1,0,1,1,1,0,1,0,2,1],
+  [1,2,0,0,0,2,2,0,0,0,0,0,2,2,0,0,0,0,0,1],
+  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,1,0,1],
+  [1,0,2,2,0,0,0,2,2,0,0,2,2,0,0,2,0,2,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ];
 
-let player = { x: 10, y: 16, dir: 0 }; // 0=left,1=up,2=right,3=down
-const nextDir = { 0: -1, 1: 3, 2: 1, 3: 2 };
-let ghosts = [
-{ x: 9, y: 8, dir: 0, color: '#ff0000', mode: 'chase' },
-{ x: 10, y: 8, dir: 1, color: '#ffb8ff', mode: 'chase' },
-{ x: 11, y: 8, dir: 3, color: '#00ffff', mode: 'chase' },
-{ x: 10, y: 9, dir: 2, color: '#ffb852', mode: 'chase' }
-];
+// Game state
+let playerRow = -1, playerCol = -1;
 let score = 0;
-let lives = 3;
-let gameState = 'playing'; // playing, dead, won
-let powerMode = false;
-let powerTimer = 0;
-let dotsRemaining = 0;
-MAZE.forEach(row => row.forEach(cell => { if (cell === 2 || cell === 3) dotsRemaining++; }));
+let totalDots = 0;
+let gameOver = false;
+let won = false;
+let moveCount = 0;
 
-function canMove(x, y) {
-if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return false;
-return MAZE[y][x] !== 1;
-}
-
-function moveGhost(g) {
-const dirs = [[-1,0],[0,-1],[1,0],[0,1]];
-const opposite = [2,3,0,1];
-let bestDir = g.dir;
-let bestDist = Infinity;
-if (g.mode === 'scared') {
-bestDist = -Infinity;
-}
-for (let i = 0; i < 4; i++) {
-if (i === opposite[g.dir]) continue;
-const nx = g.x + dirs[i][0];
-const ny = g.y + dirs[i][1];
-if (!canMove(nx, ny)) continue;
-const dist = Math.abs(nx - player.x) + Math.abs(ny - player.y);
-if (g.mode === 'scared') {
-if (dist > bestDist) { bestDist = dist; bestDir = i; }
-} else {
-if (dist < bestDist) { bestDist = dist; bestDir = i; }
-}
-}
-// Fallback: try opposite if nothing found
-if (g.x + dirs[bestDir][0] === g.x && g.y + dirs[bestDir][1] === g.y) {
-g.dir = opposite[g.dir];
-} else {
-g.dir = bestDir;
-}
-g.x += dirs[g.dir][0];
-g.y += dirs[g.dir][1];
-// Tunnel
-if (g.x < 0) g.x = COLS - 1;
-if (g.x >= COLS) g.x = 0;
+// --- Initialize ---
+function init() {
+  // Find player start and count dots
+  totalDots = 0;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (MAZE[r][c] === PLAYER) {
+        playerRow = r;
+        playerCol = c;
+        MAZE[r][c] = PATH; // clear to path
+      } else if (MAZE[r][c] === DOT) {
+        totalDots++;
+      }
+    }
+  }
+  score = 0;
+  gameOver = false;
+  won = false;
+  moveCount = 0;
+  draw();
 }
 
-document.addEventListener('keydown', e => {
-const keyMap = { ArrowLeft: 0, ArrowUp: 1, ArrowRight: 2, ArrowDown: 3, a: 0, w: 1, d: 2, s: 3 };
-if (keyMap[e.key] !== undefined) {
-player.dir = keyMap[e.key];
-e.preventDefault();
-}
-});
-
+// --- Drawing ---
 function draw() {
-ctx.fillStyle = '#000';
-ctx.fillRect(0, 0, canvas.width, canvas.height);
-for (let y = 0; y < ROWS; y++) {
-for (let x = 0; x < COLS; x++) {
-const cell = MAZE[y][x];
-const px = x * TILE;
-const py = y * TILE;
-if (cell === 1) {
-ctx.fillStyle = '#1a1aff';
-ctx.fillRect(px, py, TILE, TILE);
-} else if (cell === 2) {
-ctx.fillStyle = '#ffb8ae';
-ctx.beginPath();
-ctx.arc(px + TILE/2, py + TILE/2, 3, 0, Math.PI*2);
-ctx.fill();
-} else if (cell === 3) {
-ctx.fillStyle = '#ffb8ae';
-ctx.beginPath();
-ctx.arc(px + TILE/2, py + TILE/2, 7, 0, Math.PI*2);
-ctx.fill();
-}
-}
-}
-// Player
-ctx.fillStyle = '#ffff00';
-ctx.beginPath();
-const px = player.x * TILE + TILE/2;
-const py = player.y * TILE + TILE/2;
-let startAngle = 0.2 * Math.PI;
-let endAngle = 1.8 * Math.PI;
-if (player.dir === 0) { startAngle = 1.3*Math.PI; endAngle = 0.7*Math.PI; }
-else if (player.dir === 1) { startAngle = 1.8*Math.PI; endAngle = 1.2*Math.PI; }
-else if (player.dir === 2) { startAngle = 0.2*Math.PI; endAngle = -0.2*Math.PI; }
-ctx.arc(px, py, TILE/2-2, startAngle, endAngle);
-ctx.lineTo(px, py);
-ctx.fill();
-// Ghosts
-ghosts.forEach(g => {
-cx = g.x * TILE + TILE/2;
-cy = g.y * TILE + TILE/2;
-ctx.fillStyle = powerMode && powerTimer > 0 ? (powerTimer < 60 && powerTimer%10<5 ? '#fff' : '#2222ff') : g.color;
-ctx.beginPath();
-ctx.arc(cx, cy-3, TILE/2-2, Math.PI, 0);
-ctx.lineTo(cx+TILE/2-2, cy+TILE/2-2);
-for (let i = 3; i >= 0; i--) {
-const gx = cx + TILE/2-2 - i*(TILE-4)/3;
-ctx.quadraticCurveTo(gx + (TILE-4)/6, cy+TILE/2-6, gx, cy+TILE/2-2);
-}
-ctx.fill();
-// Eyes
-ctx.fillStyle = '#fff';
-ctx.beginPath();
-ctx.arc(cx-4, cy-5, 3, 0, Math.PI*2);
-ctx.arc(cx+4, cy-5, 3, 0, Math.PI*2);
-ctx.fill();
-ctx.fillStyle = '#00f';
-ctx.beginPath();
-ctx.arc(cx-3, cy-5, 1.5, 0, Math.PI*2);
-ctx.arc(cx+5, cy-5, 1.5, 0, Math.PI*2);
-ctx.fill();
-});
-// HUD
-ctx.fillStyle = '#fff';
-ctx.font = '16px monospace';
-ctx.fillText('Score: '+score, 5, 240);
-ctx.fillText('Lives: '+lives, canvas.width - 90, 240);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw maze
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const tile = MAZE[r][c];
+      const x = c * TILE;
+      const y = r * TILE;
+
+      if (tile === WALL) {
+        ctx.fillStyle = WALL_COLOR;
+        ctx.fillRect(x, y, TILE, TILE);
+        // Add subtle border
+        ctx.strokeStyle = '#3a3a8e';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+      } else {
+        ctx.fillStyle = PATH_COLOR;
+        ctx.fillRect(x, y, TILE, TILE);
+      }
+
+      if (tile === DOT) {
+        ctx.fillStyle = DOT_COLOR;
+        ctx.beginPath();
+        ctx.arc(x + TILE / 2, y + TILE / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (tile === EXIT) {
+        ctx.fillStyle = EXIT_COLOR;
+        ctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 4, y + 4, TILE - 8, TILE - 8);
+      }
+    }
+  }
+
+  // Draw player
+  const px = playerCol * TILE + TILE / 2;
+  const py = playerRow * TILE + TILE / 2;
+  ctx.fillStyle = PLAYER_COLOR;
+  ctx.beginPath();
+  ctx.arc(px, py, TILE / 2 - 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Mouth
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px, py, TILE / 2 - 4, -0.3, 0.3);
+  ctx.stroke();
+
+  // HUD
+  ctx.fillStyle = TEXT_COLOR;
+  ctx.font = '16px Courier New';
+  ctx.fillText('Score: ' + score + '/' + totalDots, 10, 20);
+  ctx.fillText('Moves: ' + moveCount, canvas.width - 120, 20);
+
+  // Win/Lose message
+  if (won) {
+    ctx.fillStyle = '#00ff88';
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.font = '18px Courier New';
+    ctx.fillText('Score: ' + score + '  Moves: ' + moveCount, canvas.width / 2, canvas.height / 2 + 30);
+    ctx.textAlign = 'left';
+  } else if (gameOver) {
+    ctx.fillStyle = '#ff4444';
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.font = '18px Courier New';
+    ctx.fillText('Score: ' + score + '  Moves: ' + moveCount, canvas.width / 2, canvas.height / 2 + 30);
+    ctx.textAlign = 'left';
+  }
 }
 
-function update() {
-if (gameState !== 'playing') return;
-// Move player
-const dirs = [[-1,0],[0,-1],[1,0],[0,1]];
-const nx = player.x + dirs[player.dir][0];
-const ny = player.y + dirs[player.dir][1];
-if (canMove(nx, ny)) {
-player.x = nx;
-player.y = ny;
-}
-// Tunnel
-if (player.x < 0) player.x = COLS - 1;
-if (player.x >= COLS) player.x = 0;
-// Eat dots
-if (MAZE[player.y] && MAZE[player.y][player.x] === 2) {
-MAZE[player.y][player.x] = 0;
-score += 10;
-dotsRemaining--;
-} else if (MAZE[player.y] && MAZE[player.y][player.x] === 3) {
-MAZE[player.y][player.x] = 0;
-score += 50;
-dotsRemaining--;
-powerMode = true;
-powerTimer = 240;
-ghosts.forEach(g => g.mode = 'scared');
-}
-// Power timer
-if (powerMode) {
-powerTimer--;
-if (powerTimer <= 0) {
-powerMode = false;
-ghosts.forEach(g => g.mode = 'chase');
-}
-}
-// Check win
-if (dotsRemaining <= 0) {
-gameState = 'won';
-return;
-}
-// Move ghosts
-if (Math.random() < 0.4) {
-ghosts.forEach(g => moveGhost(g));
-}
-// Check ghost collision
-ghosts.forEach(g => {
-if (g.x === player.x && g.y === player.y) {
-if (g.mode === 'scared' && powerTimer > 0) {
-g.x = 10;
-g.y = 8;
-g.mode = 'chase';
-score += 200;
-} else if (g.mode === 'chase') {
-lives--;
-if (lives <= 0) {
-gameState = 'dead';
-} else {
-player.x = 10;
-player.y = 16;
-player.dir = 0;
-ghosts.forEach((gh,i) => {
-gh.x = 9+i;
-gh.y = 8;
-});
-}
-}
-}
-});
+// --- Movement ---
+function movePlayer(dr, dc) {
+  if (gameOver || won) return;
+
+  const newRow = playerRow + dr;
+  const newCol = playerCol + dc;
+
+  // Check bounds and walls
+  if (newRow < 0 || newRow >= ROWS || newCol < 0 || newCol >= COLS) return;
+  if (MAZE[newRow][newCol] === WALL) return;
+
+  playerRow = newRow;
+  playerCol = newCol;
+  moveCount++;
+
+  // Check what's at the new tile
+  const tile = MAZE[newRow][newCol];
+  if (tile === DOT) {
+    score++;
+    MAZE[newRow][newCol] = PATH; // remove dot
+    if (score >= totalDots) {
+      won = true;
+    }
+  }
+  if (tile === EXIT) {
+    won = true;
+  }
+
+  draw();
 }
 
-setInterval(update, 150);
-setInterval(draw, 1000/30);
-draw();
+// --- Input ---
+document.addEventListener('keydown', function(e) {
+  switch (e.key) {
+    case 'ArrowUp':    e.preventDefault(); movePlayer(-1, 0); break;
+    case 'ArrowDown':  e.preventDefault(); movePlayer(1, 0); break;
+    case 'ArrowLeft':  e.preventDefault(); movePlayer(0, -1); break;
+    case 'ArrowRight': e.preventDefault(); movePlayer(0, 1); break;
+    case 'r': case 'R': init(); break;
+  }
+});
+
+// --- Start ---
+init();
